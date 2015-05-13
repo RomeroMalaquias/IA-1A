@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+
+		<script>
+		var literal = /\!?[a-z]/;		
+		var and = new RegExp(literal.source + /\ \^\ /.source + literal.source);
+		var or = new RegExp(literal.source + /\ v\ /.source + literal.source);
+		var implies = new RegExp(literal.source + /\ \-\>\ /.source + literal.source);
+		var biImplies = new RegExp(literal.source + /\ \<\-\>\ /.source + literal.source);
+		var negation = new RegExp('\\!' + literal.source);
+		var atom = new RegExp('\\!?\\((' + negation.source + /|/.source + and.source + /|/.source + or.source + /|/.source + implies.source + /|/.source + biImplies.source + /|/.source + negation.source + /|/.source + literal.source + ')\\)' +
+		'|' + and.source + /|/.source + or.source + /|/.source + implies.source + /|/.source + biImplies.source + /|/.source + literal.source);	
+		var formList = [];
+		var impliesN = new RegExp('(' + atom.source + ')+\ \-\>\ +(' + atom.source + ')'),
+		andN = new RegExp('(' + atom.source + ')+\ \\^\ +(' + atom.source + ')'),
+		orN = new RegExp('(' + atom.source + ')+\ v\ +(' + atom.source + ')'),
+		orNP = new RegExp('\\((' + andN.source + ')*(' + orN.source + ')*\\)\ v\ +\\((' + andN.source + ')*(' + orN.source + ')*\\)'),
+		andNP = new RegExp('\\((' + andN.source + ')*(' + orN.source + ')*\\)\ \\^\ +\\((' + andN.source + ')*(' + orN.source + ')*\\)'),
+		biImpliesN = RegExp('(' + atom.source + ')+\ \<\-\>\ +(' + atom.source + ')'),
+		orT = new RegExp('(' + atom.source + ')+\ v\ (T)|(T)\ v\ +(' + atom.source + ')|(T)+\ v\ +(T)'),
+		orTP = new RegExp('\\((' + andN.source + ')*(' + orN.source + ')*\\)\ v\ (T)|(T)\ v\ +\\((' + andN.source + ')*(' + orN.source + ')*\\)|\\((T)\\)+\ v\ +\\((T)\\)'),
+		orF = new RegExp('(' + atom.source + ')+\ v\ (F)|(F)\ v\ +(' + atom.source + ')|(F)+\ v\ +(F)'),
+		orFP = new RegExp('\\((' + andN.source + ')*(' + orN.source + ')*\\)\ v\ (F)|(F)\ v\ +\\((' + andN.source + ')*(' + orN.source + ')*\\)|\\((F)\\)+\ v\ +\\((F)\\)'),
+		andT = new RegExp('(' + atom.source + ')+\ \\^\ (T)|(T)\ \\^\ +(' + atom.source + ')|(T)+\ \\^\ +(T)'),
+		andTP = new RegExp('\\((' + andN.source + ')*(' + orN.source + ')*\\)\ \\^\ (T)|(T)\ \\^\ +\\((' + andN.source + ')*(' + orN.source + ')*\\)|\\((T)\\)+\ \\^\ +\\((T)\\)'),
+		andF = new RegExp('(' + atom.source + ')+\ \\^\ (F)|(F)\ \\^\ +(' + atom.source + ')|(F)+\ \\^\ +(F)'),
+		andFP = new RegExp('\\((' + andN.source + ')*(' + orN.source + ')*\\)\ \\^\ (F)|(F)\ \\^\ +\\((' + andN.source + ')*(' + orN.source + ')*\\)|\\((F)\\)+\ \\^\ +\\((F)\\)'),
+		beOrNotToBe = new RegExp('(' + atom.source + ')\ \\^\ \\!\\1'),
+		beOrNotToBe2 = new RegExp('\\!(' + atom.source + ')\ \\^\ \\1'),
+		orAnd = new RegExp('(' + atom.source + ')+\\ v\\ \\((' + andN.source + ')\\)'),
+		andOr = new RegExp('(' + atom.source + ')+\\ \\^\\ \\((' + orN.source + ')\\)'),
+		andPar = new RegExp('(' + atom.source + ')+\\ \\^\\ \\((' + andN.source + ')\\)'),
+		par = new RegExp('\\(\\!?[a-zA-Z]\\)'),
+		parP = new RegExp('\\(\\((' + andN.source + ')*(' + orN.source + ')*\\)\\)');
+		var count = 0;
+		
+		function normalize (params) {
+		var formCache = params.c !== undefined? params.c : [];		
+		if (count < 2000) {
+			count++;
+		} else {
+			return;
+		}
+		
+		var split, formula = params.f, t = params.t;
+			
+			if (par.test(formula)) {
+				split = formula.match(par);
+				split[0] = split[0].replace('(','').replace(')','');
+				formula = formula.replace(par, split[0]);
+				t = 'par';				
+			} else if (parP.test(formula)) {
+				split = formula.match(parP);
+				if (split[1] !== undefined) {
+					formula = formula.replace(parP, '(' + split[1] + ')' );
+				} else {
+					formula = formula.replace(parP, '(' + split[6] + ')');
+				}				
+				t = 'par';				
+			} else if (impliesN.test(formula) && t !== 'i') {		
+			split = formula.match(impliesN);
+				formula = formula.replace(impliesN, '!(' + split[1] + ') v ' + split[3]);
+				t = 'i';				
+			} else if (biImpliesN.test(formula) && t !== 'b') {
+				split = formula.match(biImpliesN);
+				formula = formula.replace(biImpliesN,'(!' + split[1] + ' v ' + split[3] + ') v (' + split[1] + ' v ' + '!' + split[3] + ')');
+				t = 'b';
+			} else if (orT.test(formula) && t !== 'oT') {
+				formula = formula.replace(orT, 'T');
+				t = 'oT';			
+			} else if (orTP.test(formula) && t !== 'orTP') {
+				formula = formula.replace(orTP, 'T');
+				t = 'orTP';			
+			} else if (orF.test(formula) && t !== 'oF') {
+				split = formula.match(orF);
+				t = 'oF';
+				if (split[1] !== undefined) {
+					formula= formula.replace(orF, split[1]);
+				} else if (split[4] !== undefined) {
+					formula= formula.replace(orF, split[5]);
+				} else {
+					formula= formula.replace(orF, 'F');
+				}
+				
+			} else if (orFP.test(formula) && t!== 'orFP') {
+				split = formula.match(orFP);
+				t = 'orFP';
+				if (split[1] !== undefined) {
+					formula= formula.replace(orFP, split[1]);
+				} else if (split[13] !== undefined) {
+					formula= formula.replace(orFP, split[13]);
+				} else {
+					formula= formula.replace(orF, 'F');
+				}
+			
+			} else if (andF.test(formula) && t !== 'aF') {
+				formula = formula.replace(andF, 'F');
+				t = 'aF';			
+			} else if (andFP.test(formula) && t !== 'aFP') {
+				formula = formula.replace(andFP, 'F');
+				t = 'andFP';			
+			} else if (andT.test(formula) && t !== 'aT') {
+				split = formula.match(andT);
+				t = 'aT';
+				if (split[1] !== undefined) {
+					formula = formula.replace(andT, split[1]);
+				} else if (split[4] !== undefined) {
+					formula = formula.replace(andT, split[5]);
+				} else {
+					formula = formula.replace(andT, 'T');
+				}	
+			} else if (andTP.test(formula) && t !== 'aTP') {
+				split = formula.match(andTP);
+				t = 'aT';
+				if (split[1] !== undefined) {
+					formula = formula.replace(andTP, split[1]);
+				} else if (split[13] !== undefined) {
+					formula = formula.replace(andTP, split[13]);
+				} else {
+					formula = formula.replace(andTP, 'T');
+				}	
+			} else if (andPar.test(formula)) {
+				split = formula.match(andPar);
+				formula = formula.replace(andPar, split[1] + ' ^ ' + split[3]);
+				t = 'par';
+			
+			} else if (beOrNotToBe.test(formula) && t !== 'be') {
+				formula = formula.replace(beOrNotToBe, 'F');
+				t = 'be';	
+			} else if (beOrNotToBe2.test(formula) && t !== 'be') {
+				formula = formula.replace(beOrNotToBe2, 'F');
+				t = 'be';	
+			} else if (orNP.test(formula) && t !== 'orNP') {
+				split = formula.match(orNP);
+				var auxF, auxF2;
+				auxF = normalize({f: split[1]});
+				auxF2 = normalize({f: split[11]});
+				if (auxF !== false) {
+					formula = '(' +auxF.f+')';
+				} else {
+					formula = '('+ split[1] + ')';
+				}
+				formula += ' v ';
+				if (auxF2 !== false) {
+					formula += '(' +auxF2.f+')';
+				} else {
+					formula += '('+ split[11] + ')';
+				}				
+				t = 'orNP';			
+			} else if (andNP.test(formula) && t !== 'andNP') {
+				split = formula.match(andNP);
+				var auxF, auxF2;
+				auxF = normalize({f: split[1]});
+				auxF2 = normalize({f: split[11]});
+				if (auxF !== false) {
+					formula = '(' +auxF.f+')';
+				} else {
+					formula = '('+ split[1] + ')';
+				}
+				formula += ' v ';
+				if (auxF2 !== false) {
+					formula += '(' +auxF2.f+')';
+				} else {
+					formula += '('+ split[11] + ')';
+				}				
+				t = 'andNP';			
+			} else if (orAnd.test(formula) && t !== 'oA') {
+				split = formula.match(orAnd);
+				formula = formula.replace(orAnd, '(' + split[1] + ' v ' + split[4] +')' + ' ^ ' + '(' + split[1] + ' v ' + split[6] +')'); 
+				t = 'oA';
+			} else if (andOr.test(formula) && t !== 'aO') {
+				split = formula.match(andOr);
+				formula = formula.replace(andOr, '(' + split[1] + ' ^ ' + split[4] +')' + ' v ' + '(' + split[1] + ' ^ ' + split[6] +')');
+				t = 'oA';
+			}  else if (andN.test(formula) && t !== 'a') {
+				split = formula.match(andN);
+				formula = formula.replace(andN, split[3] + ' ^ ' + split[1]);
+				t = 'a';
+			} else if (orN.test(formula) && t !== 'o') {
+				split = formula.match(orN);
+				formula = formula.replace(orN, split[3] + ' v ' + split[1]);
+				t = 'o';
+			}
+			
+			console.log('f: ' + formula + ' t: ' + t);
+						
+			if (t !== 'par' && (formCache.indexOf(t) === -1 || formCache.indexOf(t) === formCache.lastIndexOf(t))) {
+				formCache.push(t);				
+				return normalize({f: formula, t: t, c: formCache});
+			} else if (t !== 'par'){		
+				formCache = [];			
+				console.log('on cache');
+				return {f: params.f, t: params.t};
+			} else {			
+				if (formula === params.f) {
+					return {f: params.f, t: params.t};
+				}
+				return normalize({f: formula, t: t, c: formCache});
+			}
+		}	
+		
+		
+		function normalizePair (formula, formula2) {
+			if (!(formula[0] === '(' && formula[formula.length-1] === ')')) {
+				formula = '(' + formula + ')';
+			}
+			
+			if (!(formula2[0] === '(' && formula2[formula2.length-1] === ')')) {
+				formula2 = '(' + formula2 + ')';
+			}
+			aux = formula + ' ^ ' + formula2;
+			console.log(aux);
+			normaLizeParams = normalize({f: aux, t: ''});
+			if (normaLizeParams.f.length >= aux.length) {
+				console.log('here we go!');
+				aux = formula2 + ' ^ ' + formula;
+				console.log(aux);
+				normaLizeParams = normalize({f: aux, t: ''});
+				if (normaLizeParams.f.length >= aux.length) {
+					return false;
+				}
+			}
+			return normaLizeParams;			
+		
+		}
+		
+		function resolve (formula, atom, atom2) {
+			if (formula.indexOf('^') !== -1) {
+				return atom && atom2;
+			} else if (formula.indexOf('v') !== -1) {
+				return atom || atom2;
+			} else if (formula.indexOf('!') !== -1) {
+				return !atom;
+			}			
+		}
+		
+		function logicalConsequence(){
+		var proof = 'Trying to prove: ' + formList[formList.length - 1] + ' is consequence of ';
+			for (i = 0; i < formList.length - 1; i++) {
+				proof += '(' + formList[i] + ')';
+				if (i < formList.length - 2) {
+					proof += ' ^ ';
+				}
+			}
+			proof += '<br>';
+			var consequence = formList[formList.length - 1], repeat = true, j = 0, normalizeParams, aux = [], indexUsed = [0], normalizedParams;			
+			for (i = 0; i < formList.length - 1; i++) { 				
+				normaLizeParams = normalize({f: formList[i], t: ''});	
+				console.log(formList[i] + ' >>>> ' + normaLizeParams.f);
+				formList[i] = normaLizeParams.f;
+				if (normaLizeParams !== undefined) {
+					proof += '(' + normaLizeParams.f + ')';
+					if (i < formList.length - 2) {
+						proof += ' ^ ';				
+					}
+				}
+			}
+			proof += '<br>';
+			console.log(formList);
+			console.log('second for');
+			j = 1;
+			normalizedParams = formList[0];
+			while (repeat) {
+				while (repeat) {	
+					console.log(indexUsed.indexOf(j));
+					if (indexUsed.indexOf(j) === -1) {
+						normaLizeParams = normalizePair(normalizedParams, formList[j]);
+						console.log(normaLizeParams);
+						if (normaLizeParams !== false) {							
+							aux.push(normaLizeParams.f);
+							proof += '(' + normalizedParams + ') ^ ('+ formList[j] + ') = ';
+							normalizedParams = normaLizeParams.f;
+							proof += normalizedParams + '<br>';
+							indexUsed.push(j);
+						} 
+					}
+					j++;
+				
+					if (indexUsed.length >= formList.length -1 || j >= formList.length -1 ) {
+						repeat = false;
+					}
+				}
+				if (indexUsed.length >= formList.length -1) {				
+					repeat = false;	
+					proof += normalizedParams + '<br>';				
+				} else {
+					j = 1;
+					repeat = true;
+				}
+				
+				
+				
+			}
+
+			$('#consequenceOutput').html($('#consequenceOutput').html() + proof);
+			
+		}
+		function addFormula() {
+			formList.push( $('#sentenceInput').val());
+			console.log(formList);
+			var proof = 'Sentences: <br>';
+			for (i = 0; i < formList.length - 1; i++) {
+				proof += 'f' + i + ':' + formList[i] + '<br>';				
+			}
+			proof += 'G: ' + formList[formList.length - 1];
+			$('#consequenceOutput').html(proof);
+		
+		}
+		function addFormula2(formula) {
+			formList.push(formula);
+			var proof = 'Sentences: <br>';
+			for (i = 0; i < formList.length - 1; i++) {
+				proof += 'f' + i + ':' + formList[i] + '<br>';				
+			}
+			proof += 'G: ' + formList[formList.length - 1] + '<br><br>';
+			$('#consequenceOutput').html(proof);
+		}
+		function normalizeInput() {
+			var result = normalize( {f: $('#sentence2Input').val(), t: ''});
+			$('#normalizeOutput').html(result.f);
+		}
+		function resetFormula() {
+			formList = [];
+			$('#consequenceOutput').html('');
+		}
+		</script>
+	<style>
+	.result {
+		font-family:Courier;
+		color: #CCCCCC;
+		background: #000000;
+		border: 3px double #CCCCCC;
+		padding: 10px;	
+		width: 650px;
+		max-width: 650px;		
+	}
+	.result-container > div:first-child {
+		width: 230px
+	}
+	input {
+		width: 90%;
+	}
+
+	.result-container {
+		display: flex;
+		width: 900px;
+		margin: 50px auto;	
+		justify-content: space-between;    
+	} 
+	</style>
+	</head>
+	<body>
+		<div class="result-container">
+			<div>
+				<h2>Add Sentence</h2>
+				<input type="text" id="sentenceInput"/>	
+				<button onclick="addFormula()">Add</button>
+				<button onclick="logicalConsequence()">Start</button>
+				<button onclick="resetFormula()">Reset</button>
+			</div>
+			
+			<div id="consequenceOutput" class="result"></div>
+
+		</div>		
+		<div class="result-container">
+			<div>
+				<h2>Normalize</h2>
+				<input type="text" id="sentence2Input"/>			
+				<button onclick="normalizeInput()">Start</button>
+			</div>
+			
+			<div id="normalizeOutput" class="result"></div>
+		</div>
+		
+	</body>
+</html>
