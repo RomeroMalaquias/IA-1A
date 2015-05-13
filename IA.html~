@@ -446,7 +446,7 @@
 				}
 				proof += '<br>';
 			}
-			$('#truthOutput').html(proof);
+			$('#consequenceOutput').html(proof);
 			
 		}
 		</script>
