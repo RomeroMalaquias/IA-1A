@@ -35,6 +35,7 @@
 		par = new RegExp('\\(\\!?[a-zA-Z]\\)'),
 		parP = new RegExp('\\(\\((' + andN.source + ')*(' + orN.source + ')*\\)\\)');
 		var count = 0;
+		var verbTerm = ['o', 'as', 'es', 'amos', 'emos', 'imos', 'ais', 'eis', 'is', 'am', 'em', 'ava', 'ia', 'avas', 'ia', 'ias', 'ava', 'ávamos', 'íamos', 'áveis', 'íeis', 'íamos', 'áveos', 'íeis', 'avam', 'iam', 'ei', 'i', 'aste', 'este', 'iste', 'ou', 'eu', 'iu', 'ámos', 'emos', 'imos', 'astes', 'estes', 'istes', 'aram', 'eram', 'iram', 'ara', 'era', 'ira', 'aras', 'eras', 'iras', 'ara', 'era', 'ira', 'áramos', 'êramos', 'íramos', 'áreis', 'êreis', 'íreis', 'aram', 'eram', 'iram', 'arei', 'erei', 'irei', 'arás', 'erás', 'irás', 'ará', 'erás', 'irás', 'ará', 'erá', 'irá', 'aremos', 'eremos', 'iremos', 'areis', 'ereis', 'ireis', 'arão', 'erão', 'irão'];
 		
 		function normalize (params) {
 		var formCache = params.c !== undefined? params.c : [];		
