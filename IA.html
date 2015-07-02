@@ -450,6 +450,41 @@
 			$('#truthOutput').html(proof);
 			
 		}
+		
+		function inferenceRules(formula, entry) {
+		var rule = '', aux = '', splitAux, compareVar, compareVarAux, returnString;
+			if (impliesN.test(formula)) {
+				split = formula.match(impliesN);
+				compareVar = split[1] !== undefined? split[1] : split[2];
+				if (compareVar === entry) { //Modus Ponens
+					returnString = split[3] !== undefined? split[3] : split[4];
+					return returnString;					
+				}
+				aux = entry.replace('!', '');
+				compareVar = split[3] !== undefined? split[3] : split[4];
+				if (compareVar === aux) { //Modus Tollens
+					returnString = split[1] !== undefined? '!' + split[1] : '!' + split[2];
+					return returnString;			
+				}
+				if (impliesN.test(entry)) {
+					splitAux = entry.match(impliesN);
+					compareVarAux = splitAux[1] !== undefined? splitAux[1]:splitAux[2];
+					if (compareVarAux === compareVar) { //Silogismo Hipotetico
+						rule = 'SH';		
+						returnString = split[1] !== undefined? split[1]:split[2];
+						returnString += ' -> ';
+						aux = splitAux[3] !== undefined? splitAux[3] : splitAux[4];
+						returnString += aux;
+						return returnString;
+					}
+				}		
+				
+				
+				console.log(split);
+			}
+		
+		}
+		
 		</script>
 	<style>
 	.result {
