@@ -185,14 +185,12 @@
 				t = 'o';
 			}
 			
-			console.log('f: ' + formula + ' t: ' + t);
 						
 			if (t !== 'par' && (formCache.indexOf(t) === -1 || formCache.indexOf(t) === formCache.lastIndexOf(t))) {
 				formCache.push(t);				
 				return normalize({f: formula, t: t, c: formCache});
 			} else if (t !== 'par'){		
 				formCache = [];			
-				console.log('on cache');
 				return {f: params.f, t: params.t};
 			} else {			
 				if (formula === params.f) {
@@ -212,12 +210,9 @@
 				formula2 = '(' + formula2 + ')';
 			}
 			aux = formula + ' ^ ' + formula2;
-			console.log(aux);
 			normaLizeParams = normalize({f: aux, t: ''});
 			if (normaLizeParams.f.length >= aux.length) {
-				console.log('here we go!');
 				aux = formula2 + ' ^ ' + formula;
-				console.log(aux);
 				normaLizeParams = normalize({f: aux, t: ''});
 				if (normaLizeParams.f.length >= aux.length) {
 					return false;
@@ -249,7 +244,6 @@
 			var consequence = formList[formList.length - 1], repeat = true, j = 0, normalizeParams, aux = [], indexUsed = [0], normalizedParams;			
 			for (i = 0; i < formList.length - 1; i++) { 				
 				normaLizeParams = normalize({f: formList[i], t: ''});	
-				console.log(formList[i] + ' >>>> ' + normaLizeParams.f);
 				formList[i] = normaLizeParams.f;
 				if (normaLizeParams !== undefined) {
 					proof += '(' + normaLizeParams.f + ')';
@@ -259,16 +253,12 @@
 				}
 			}
 			proof += '<br>';
-			console.log(formList);
-			console.log('second for');
 			j = 1;
 			normalizedParams = formList[0];
 			while (repeat) {
 				while (repeat) {	
-					console.log(indexUsed.indexOf(j));
 					if (indexUsed.indexOf(j) === -1) {
 						normaLizeParams = normalizePair(normalizedParams, formList[j]);
-						console.log(normaLizeParams);
 						if (normaLizeParams !== false) {							
 							aux.push(normaLizeParams.f);
 							proof += '(' + normalizedParams + ') ^ ('+ formList[j] + ') = ';
@@ -300,31 +290,23 @@
 		}
 		function addFormula() {
 			formList.push( $('#sentenceInput').val());
-			console.log(formList);
 			var proof = 'Sentences: <br>';
 			for (i = 0; i < formList.length - 1; i++) {
 				proof += 'f' + i + ':' + formList[i] + '<br>';				
 			}
 			proof += 'G: ' + formList[formList.length - 1];
-			$('#consequenceOutput').html(proof);
+			$('#formulaOutput').html(proof);
 		
-		}
-		function addFormula2(formula) {
-			formList.push(formula);
-			var proof = 'Sentences: <br>';
-			for (i = 0; i < formList.length - 1; i++) {
-				proof += 'f' + i + ':' + formList[i] + '<br>';				
-			}
-			proof += 'G: ' + formList[formList.length - 1] + '<br><br>';
-			$('#consequenceOutput').html(proof);
-		}
+		}		
 		function normalizeInput() {
 			var result = normalize( {f: $('#sentence2Input').val(), t: ''});
 			$('#normalizeOutput').html(result.f);
 		}
 		function resetFormula() {
 			formList = [];
+			$('#formulaOutput').html('');
 			$('#consequenceOutput').html('');
+			$('#truthOutput').html('');
 		}
 		function testAtom(atom, ent, ent2) {
 			if (andN.test(atom)) {
@@ -337,6 +319,8 @@
 				return ent === ent2;
 			} else if (negation.test(atom)) {
 				return !ent;
+			} else {
+				return ent;
 			}
 
 		}
@@ -356,29 +340,97 @@
 				return [split[1], split[3]];
 			} else if (negation.test(atom)) {
 				return [atom.replace('!', '')];
-			}
+			} 
+			return [atom];
 
 		}
 
 
 		var atomList = [];
-		function separateAtom(formula) {
-			if (formula === undefined) {
-				formula = $('#sentence3Input').val()
-			}
-			var split = formula, table = {}, keyList = [], aux = -1;
-			for (i = 0; i < split.length; i++)
-				if (/[a-z]/.test(split[i]) && split[i] !== 'v') {
+		function truthTable () {
+		var proof = '', i = 0, isConsequence;		
+		for (i = 0; i < formList.length - 1; i++) {
+			proof += '(' +formList[i] + ') ^ ';
+		}
+		proof = proof.substring(0, proof.lastIndexOf(' ^ '));
+		$('#truthOutput').append('Trying to prove: ' + formList[formList.length - 1] + ' is consequence of ' + proof + ' by direct form');
+		isConsequence = separateAtom(proof, formList[formList.length - 1]);
+		if (isConsequence) {
+			$('#truthOutput').append('Consequence confirmed');
+		} else {
+			$('#truthOutput').append('Consequence denied');
+		}
+	
+		$('#truthOutput').append('<br>Trying to prove: ' + formList[formList.length - 1] + ' is consequence of ' + proof + ' by contradiction');
+		isConsequence = separateAtom(proof + ' ^ !(' + formList[formList.length - 1] + ')', formList[formList.length - 1]);
+		if (isConsequence) {
+			$('#truthOutput').append('Consequence confirmed');
+		} else {
+			$('#truthOutput').append('Consequence denied');
+		}
+		
+		};
+		
+		function separateAtom(formula, argument) {	
+			var split = formula, table = {}, keyList = [], aux = -1, k =0, j = 0, numOfAtom = 0, numOfRows, tableAux = [], tableAuxN = [], formulaMatch = [], isTrue = false, isConsequence = true;
+			console.log(formula);
+			for (i = 0; i < split.length; i++) {
+				if (/[a-z]/.test(split[i]) && split[i] !== 'v') {	
 					if (table[split[i]] === undefined) {
-						if (i%2 === 0) {
-							table[split[i]] = [true, true, false,false];
-						}else{
-							table[split[i]] = [true, false, true,false];
+						numOfAtom ++;
+						table[split[i]] = 'a';
+					}					
+					
+				}
+			}
+			table = [];
+			numOfRows = Math.pow(2, numOfAtom);
+			for (i = 0; i < split.length; i++) {
+				if (/[a-z]/.test(split[i]) && split[i] !== 'v') {
+				console.log(split[i]);
+					if (table[split[i]] === undefined) {
+					tableAux = [];
+					for (j = 0; j < numOfRows; j++) {
+						if (k === 0) {
+							if (j < (numOfRows / 2)) {
+								tableAux.push(true);
+								tableAuxN.push(false);
+							} else {
+								tableAux.push(false);
+								tableAuxN.push(true);
+							}
+						} else if (k === 1) {
+							if ((j +1) % 3 === 0 || (j + 1) % 4 === 0 || (j + 1) % 7 === 0) {
+								tableAux.push(false);
+								tableAuxN.push(true);
+							} else {
+								tableAux.push(true);
+								tableAuxN.push(false);
+							}
+						
+						} else if (k === 2) {
+							if (j % 2 === 0) {
+								tableAux.push(true);
+								tableAuxN.push(false);
+							} else {
+								tableAux.push(false);
+								tableAuxN.push(true);
+							}
+						}						
+					}
+						if (numOfRows === 8) {
+							k ++;
+						} else {
+							k = k + 2;
 						}
-
-						keyList.push(split[i]);
+						
+						table[split[i]] = tableAux;
+						table['!' + split[i]] = tableAuxN;
+						keyList.push(split[i]);	
+						console.log(table);
 					}
 				}
+			}
 			if (andN.test(formula)) {
 				split = formula.match(andN);
 				for (i = 2; i < split.length; i++) {
@@ -387,7 +439,7 @@
 							keyList.push(split[i]);
 							table[split[i]] = [];
 							aux = returnAtomPair(split[i]);
-							for (k = 0; k < 4; k++) {
+							for (k = 0; k < numOfRows; k++) {
 								if (aux[1] !== undefined) {
 									table[split[i]].push(testAtom(split[i], table[aux[0]][k], table[aux[1]][k] ));
 								} else {
@@ -407,9 +459,9 @@
 				if (split[i] !== undefined) {
 						if (table[split[i]] === undefined) {
 							keyList.push(split[i]);
-							table[split[i]] = [];
+							table[split[i]] = [];							
 							aux = returnAtomPair(split[i]);
-							for (k = 0; k < 4; k++) {
+							for (k = 0; k < numOfRows; k++) {
 								if (aux[1] !== undefined) {
 									table[split[i]].push(testAtom(split[i], table[aux[0]][k], table[aux[1]][k] ));
 								} else {
@@ -424,30 +476,53 @@
 			keyList.push(formula);
 			table[formula] = [];
 			aux = returnAtomPair(formula);
-			console.log(returnAtomPair(formula));
-			for (k = 0; k < 4; k++) {
+			
+			for (k = 0; k < numOfRows; k++) {
 				if (aux[1] !== undefined) {
-					table[formula].push(testAtom(formula, table[aux[0].replace('(','').replace(')','')][k], table[aux[1].replace('(','').replace(')','')][k] ));
+					isTrue = testAtom(formula, table[aux[0].replace('(','').replace(')','')][k], table[aux[1].replace('(','').replace(')','')][k] );					
 				} else {
-					table[formula].push(testAtom(formula, table[aux[0].replace('(','').replace(')','')][k]));
+					isTrue = testAtom(formula, table[aux[0].replace('(','').replace(')','')][k]);
+				}
+				table[formula].push(isTrue);
+				if (isTrue) {
+					formulaMatch.push(k);
 				}
 				
 			}
-			console.log(keyList);
-			console.log(table);
-			var proof = '';
-				for (i = 0; i < keyList.length; i++) {
-					proof+= keyList[i] + ' ';
+			keyList.push('G: ' + argument);
+			table['G: ' + argument] = [];
+			console.log(aux);
+			aux = returnAtomPair(argument);
+			console.log(aux);
+			for (k = 0; k < numOfRows; k++) {			
+				if (aux[1] !== undefined) {
+					isTrue = testAtom(argument, table[aux[0].replace('(','').replace(')','')][k], table[aux[1].replace('(','').replace(')','')][k]);					
+				} else {
+					isTrue = testAtom(argument, table[aux[0].replace('(','').replace(')','')][k]);
 				}
-			proof += '<br>';
-
-			for(k = 0; k < 4; k++) {
-				for (i = 0; i < keyList.length; i++) {
-					proof+= table[keyList[i]][k] + ' ';
+				table['G: ' + argument].push(isTrue);
+				if (formulaMatch.indexOf(k) !== -1 && !isTrue) {
+					isConsequence = false;
 				}
-				proof += '<br>';
+				
 			}
-			$('#truthOutput').html(proof);
+			
+			var proof = '<table class="table"><thead>';
+				for (i = 0; i < keyList.length; i++) {
+					proof+= '<th>' + keyList[i] + '</th> ';
+				}
+			proof += '</thead><tbody>';
+
+			for(k = 0; k < numOfRows; k++) {
+			proof += '<tr>';
+				for (i = 0; i < keyList.length; i++) {
+					proof+= '<td>' + table[keyList[i]][k] + '</td>';
+				}
+				proof += '</tr>';
+			}
+			proof += '</tbody></table>';			
+			$('#truthOutput').append(proof);
+			return isConsequence;
 			
 		}
 		
@@ -480,7 +555,6 @@
 				}		
 				
 				
-				console.log(split);
 			}
 		
 		}
@@ -509,36 +583,44 @@
 		margin: 50px auto;	
 		justify-content: space-between;    
 	} 
+	table {
+		text-align: center;
+		
+	}
+	th, td { 
+		border-right: 1px solid white;
+	}
+	th:nth-child(1), td:nth-child(1){
+		border-left: 1px solid white;
+	}
 	</style>
 	</head>
 	<body>
+	<div class="result-container">
+			<div>
+				<h2>Formula Container</h2>
+				<input type="text" id="sentenceInput"/>	
+				<button onclick="addFormula()">Add Sentence</button>				
+				<button onclick="resetFormula()">Reset</button>
+			</div>
+			
+			<div id="formulaOutput" class="result"></div>
+
+		</div>
 		<div class="result-container">
 			<div>
 				<h2>Logical Consequence</h2>
-				<input type="text" id="sentenceInput"/>	
-				<button onclick="addFormula()">Add Sentence</button>
 				<button onclick="logicalConsequence()">Start</button>
-				<button onclick="resetFormula()">Reset</button>
 			</div>
 			
 			<div id="consequenceOutput" class="result"></div>
 
 		</div>		
-		<div class="result-container">
-			<div>
-				<h2>Normalize</h2>
-				<input type="text" id="sentence2Input"/>			
-				<button onclick="normalizeInput()">Start</button>
-			</div>
-			
-			<div id="normalizeOutput" class="result"></div>
-		</div>
-
+		
 		<div class="result-container">
 			<div>
 				<h2>Truth table</h2>
-				<input type="text" id="sentence3Input"/>			
-				<button onclick="separateAtom()">Start</button>
+				<button onclick="truthTable()">Start</button>
 			</div>
 			
 			<div id="truthOutput" class="result"></div>
