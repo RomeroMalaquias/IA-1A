@@ -12,14 +12,18 @@
 		var negation = new RegExp('\\!' + literal.source);
 		var atom = new RegExp('\\!?\\((' + negation.source + /|/.source + and.source + /|/.source + or.source + /|/.source + implies.source + /|/.source + biImplies.source + /|/.source + negation.source + /|/.source + literal.source + ')\\)' +
 		'|' + and.source + /|/.source + or.source + /|/.source + implies.source + /|/.source + biImplies.source + /|/.source + literal.source);	
-		var formList = [];
+		var formList = [], formListTruth = [];
 		var impliesN = new RegExp('(' + atom.source + ')+\ \-\>\ +(' + atom.source + ')'),
 		andN = new RegExp('(' + atom.source + ')+\ \\^\ +(' + atom.source + ')'),
 		orN = new RegExp('(' + atom.source + ')+\ v\ +(' + atom.source + ')'),
 		orNP = new RegExp('\\((' + andN.source + ')*(' + orN.source + ')*\\)\ v\ +\\((' + andN.source + ')*(' + orN.source + ')*\\)'),
 		andNP = new RegExp('\\((' + andN.source + ')*(' + orN.source + ')*\\)\ \\^\ +\\((' + andN.source + ')*(' + orN.source + ')*\\)'),
 		biImpliesN = RegExp('(' + atom.source + ')+\ \<\-\>\ +(' + atom.source + ')'),
-		orT = new RegExp('(' + atom.source + ')+\ v\ (T)|(T)\ v\ +(' + atom.source + ')|(T)+\ v\ +(T)'),
+		impliesNT = new RegExp('(T)\ \-\>\ (T)|(F)\ \-\>\ (T)|(F)\ \-\>\ (F)'),
+		impliesNF = new RegExp('(T)\ \-\>\ (F)'),
+		bimpliesNT = new RegExp('(T)\ \<\-\>\ (T)|(F)\ \<\-\>\ (F)'),
+		bimpliesNF = new RegExp('(T)\ \<\-\>\ (F)|(F)\ \<\-\>\ (T)'),
+		orT = new RegExp('(' + atom.source + ')+\ v\ (T)|(T)\ v\ +(' + atom.source + ')|(T)+\ v\ +(T)|(F)+\ v\ +(T)|(T)+\ v\ +(F)'),
 		orTP = new RegExp('\\((' + andN.source + ')*(' + orN.source + ')*\\)\ v\ (T)|(T)\ v\ +\\((' + andN.source + ')*(' + orN.source + ')*\\)|\\((T)\\)+\ v\ +\\((T)\\)'),
 		orF = new RegExp('(' + atom.source + ')+\ v\ (F)|(F)\ v\ +(' + atom.source + ')|(F)+\ v\ +(F)'),
 		orFP = new RegExp('\\((' + andN.source + ')*(' + orN.source + ')*\\)\ v\ (F)|(F)\ v\ +\\((' + andN.source + ')*(' + orN.source + ')*\\)|\\((F)\\)+\ v\ +\\((F)\\)'),
@@ -60,21 +64,39 @@
 					formula = formula.replace(parP, '(' + split[6] + ')');
 				}				
 				t = 'par';				
+			} else if (formula && formula.indexOf('!!') !== -1) {
+				formula = formula.replace('!!', '');
+			} else if (formula && formula.indexOf('!T') !== -1) {
+				formula = formula.replace('!T', 'F');
+			} else if (formula && formula.indexOf('!F') !== -1) {
+				formula = formula.replace('!F', 'T');
 			} else if (impliesN.test(formula) && t !== 'i') {		
 			split = formula.match(impliesN);
 				formula = formula.replace(impliesN, '!(' + split[1] + ') v ' + split[3]);
 				t = 'i';				
+			} else if (impliesNT.test(formula)) {			
+				formula = formula.replace(impliesNT, 'T');
+				t = 'iT';			
+			} else if (impliesNF.test(formula)) {			
+				formula = formula.replace(impliesNF, 'F');
+				t = 'iF';			
 			} else if (biImpliesN.test(formula) && t !== 'b') {
 				split = formula.match(biImpliesN);
 				formula = formula.replace(biImpliesN,'(!' + split[1] + ' v ' + split[3] + ') v (' + split[1] + ' v ' + '!' + split[3] + ')');
 				t = 'b';
-			} else if (orT.test(formula) && t !== 'oT') {
+			} else if (bimpliesNT.test(formula)) {			
+				formula = formula.replace(bimpliesNT, 'T');
+				t = 'iT';			
+			} else if (bimpliesNF.test(formula)) {			
+				formula = formula.replace(bimpliesNF, 'F');
+				t = 'biF';			
+			} else if (orT.test(formula)) {			
 				formula = formula.replace(orT, 'T');
 				t = 'oT';			
-			} else if (orTP.test(formula) && t !== 'orTP') {
+			} else if (orTP.test(formula)) {
 				formula = formula.replace(orTP, 'T');
 				t = 'orTP';			
-			} else if (orF.test(formula) && t !== 'oF') {
+			} else if (orF.test(formula)) {
 				split = formula.match(orF);
 				t = 'oF';
 				if (split[1] !== undefined) {
@@ -85,7 +107,7 @@
 					formula= formula.replace(orF, 'F');
 				}
 				
-			} else if (orFP.test(formula) && t!== 'orFP') {
+			} else if (orFP.test(formula)) {
 				split = formula.match(orFP);
 				t = 'orFP';
 				if (split[1] !== undefined) {
@@ -96,13 +118,13 @@
 					formula= formula.replace(orF, 'F');
 				}
 			
-			} else if (andF.test(formula) && t !== 'aF') {
+			} else if (andF.test(formula)) {
 				formula = formula.replace(andF, 'F');
 				t = 'aF';			
-			} else if (andFP.test(formula) && t !== 'aFP') {
+			} else if (andFP.test(formula)) {
 				formula = formula.replace(andFP, 'F');
 				t = 'andFP';			
-			} else if (andT.test(formula) && t !== 'aT') {
+			} else if (andT.test(formula)) {
 				split = formula.match(andT);
 				t = 'aT';
 				if (split[1] !== undefined) {
@@ -112,7 +134,7 @@
 				} else {
 					formula = formula.replace(andT, 'T');
 				}	
-			} else if (andTP.test(formula) && t !== 'aTP') {
+			} else if (andTP.test(formula)) {
 				split = formula.match(andTP);
 				t = 'aT';
 				if (split[1] !== undefined) {
@@ -135,7 +157,7 @@
 				t = 'be';	
 			} else if (orNP.test(formula) && t !== 'orNP') {
 				split = formula.match(orNP);
-				var auxF, auxF2;
+				var auxF, auxF2;					
 				auxF = normalize({f: split[1]});
 				auxF2 = normalize({f: split[11]});
 				if (auxF !== false) {
@@ -200,7 +222,24 @@
 			}
 		}	
 		
-		
+		function testInduction(formula) {
+			var split = formula, re, testExceptV = /\![a-ux-z]/, aux = split.match(testExceptV);
+			while(aux !== null) {
+				split = split.replace(aux[0], 'F');
+				aux = split.match(testExceptV);
+			}
+			testExceptV = /[a-ux-z]/;
+			aux = split.match(testExceptV);
+			while(aux !== null) {
+				split = split.replace(aux[0], 'T');
+				aux = split.match(testExceptV);
+			}
+			if(normalize({f: split}).f === 'T') {
+				return true;
+			} else {
+				return false;
+			}
+		}
 		function normalizePair (formula, formula2) {
 			if (!(formula[0] === '(' && formula[formula.length-1] === ')')) {
 				formula = '(' + formula + ')';
@@ -232,36 +271,45 @@
 			}			
 		}
 		
-		function logicalConsequence(){
-		var proof = 'Trying to prove: ' + formList[formList.length - 1] + ' is consequence of ';
-			for (i = 0; i < formList.length - 1; i++) {
-				proof += '(' + formList[i] + ')';
-				if (i < formList.length - 2) {
+		function logicalConsequence(forms, contradiction){
+		var formListAux = forms, proof = 'Trying to prove: ' + formListAux[formListAux.length - 1] + ' is consequence of ';
+			for (i = 0; i < formListAux.length - 1; i++) {
+				proof += '(' + formListAux[i] + ')';
+				if (i < formListAux.length - 2) {
 					proof += ' ^ ';
 				}
 			}
+			
+			if (contradiction) {
+				proof += ' by contradiction';
+				formListAux.push(formListAux[formListAux.length - 1]);
+				formListAux[formListAux.length - 2] = '!(' + formListAux[formListAux.length - 1] + ')';
+			} else {
+				proof += ' by direct form';
+			}
+			
 			proof += '<br>';
-			var consequence = formList[formList.length - 1], repeat = true, j = 0, normalizeParams, aux = [], indexUsed = [0], normalizedParams;			
-			for (i = 0; i < formList.length - 1; i++) { 				
-				normaLizeParams = normalize({f: formList[i], t: ''});	
-				formList[i] = normaLizeParams.f;
+			var consequence = formListAux[formListAux.length - 1], repeat = true, j = 0, normalizeParams, aux = [], indexUsed = [0], normalizedParams;			
+			for (i = 0; i < formListAux.length - 1; i++) { 				
+				normaLizeParams = normalize({f: formListAux[i], t: ''});	
+				formListAux[i] = normaLizeParams.f;
 				if (normaLizeParams !== undefined) {
 					proof += '(' + normaLizeParams.f + ')';
-					if (i < formList.length - 2) {
+					if (i < formListAux.length - 2) {
 						proof += ' ^ ';				
 					}
 				}
 			}
 			proof += '<br>';
 			j = 1;
-			normalizedParams = formList[0];
+			normalizedParams = formListAux[0];
 			while (repeat) {
 				while (repeat) {	
 					if (indexUsed.indexOf(j) === -1) {
-						normaLizeParams = normalizePair(normalizedParams, formList[j]);
+						normaLizeParams = normalizePair(normalizedParams, formListAux[j]);
 						if (normaLizeParams !== false) {							
 							aux.push(normaLizeParams.f);
-							proof += '(' + normalizedParams + ') ^ ('+ formList[j] + ') = ';
+							proof += '(' + normalizedParams + ') ^ ('+ formListAux[j] + ') = ';
 							normalizedParams = normaLizeParams.f;
 							proof += normalizedParams + '<br>';
 							indexUsed.push(j);
@@ -269,11 +317,11 @@
 					}
 					j++;
 				
-					if (indexUsed.length >= formList.length -1 || j >= formList.length -1 ) {
+					if (indexUsed.length >= formListAux.length -1 || j >= formListAux.length -1 ) {
 						repeat = false;
 					}
 				}
-				if (indexUsed.length >= formList.length -1) {				
+				if (indexUsed.length >= formListAux.length -1) {				
 					repeat = false;	
 					proof += normalizedParams + '<br>';				
 				} else {
@@ -283,27 +331,48 @@
 				
 				
 				
-			}		
+			}
+			
+			if (contradiction) {
+				if (!testInduction(normalizedParams)) {
+				proof += 'Consequence confirmed';
+				} else {
+					proof += 'Consequence denied';
+				}
+			} else {
+				if (testInduction(normalizedParams)) {
+					proof += 'T<br>Consequence confirmed';
+				} else {
+					proof += 'F<br>Consequence denied';
+				}
+			}
 
 			$('#consequenceOutput').html($('#consequenceOutput').html() + proof);
 			
 		}
 		function addFormula() {
 			formList.push( $('#sentenceInput').val());
+			formListTruth.push( $('#sentenceInput').val());
 			var proof = 'Sentences: <br>';
 			for (i = 0; i < formList.length - 1; i++) {
 				proof += 'f' + i + ':' + formList[i] + '<br>';				
 			}
-			proof += 'G: ' + formList[formList.length - 1];
+			proof += 'G: ' + formList[formList.length - 1];			
 			$('#formulaOutput').html(proof);
 		
-		}		
+		}	
+		function testByConsequence () {
+			logicalConsequence(formList);
+			$('#consequenceOutput').append('<BR>');
+			logicalConsequence(formList, true);
+		}
 		function normalizeInput() {
 			var result = normalize( {f: $('#sentence2Input').val(), t: ''});
 			$('#normalizeOutput').html(result.f);
 		}
 		function resetFormula() {
 			formList = [];
+			formListTruth = [];
 			$('#formulaOutput').html('');
 			$('#consequenceOutput').html('');
 			$('#truthOutput').html('');
@@ -349,20 +418,20 @@
 		var atomList = [];
 		function truthTable () {
 		var proof = '', i = 0, isConsequence;		
-		for (i = 0; i < formList.length - 1; i++) {
-			proof += '(' +formList[i] + ') ^ ';
+		for (i = 0; i < formListTruth.length - 1; i++) {
+			proof += '(' +formListTruth[i] + ') ^ ';
 		}
 		proof = proof.substring(0, proof.lastIndexOf(' ^ '));
-		$('#truthOutput').append('Trying to prove: ' + formList[formList.length - 1] + ' is consequence of ' + proof + ' by direct form');
-		isConsequence = separateAtom(proof, formList[formList.length - 1]);
+		$('#truthOutput').append('Trying to prove: ' + formListTruth[formListTruth.length - 1] + ' is consequence of ' + proof + ' by direct form');
+		isConsequence = separateAtom(proof, formListTruth[formListTruth.length - 1]);
 		if (isConsequence) {
 			$('#truthOutput').append('Consequence confirmed');
 		} else {
 			$('#truthOutput').append('Consequence denied');
 		}
 	
-		$('#truthOutput').append('<br>Trying to prove: ' + formList[formList.length - 1] + ' is consequence of ' + proof + ' by contradiction');
-		isConsequence = separateAtom(proof + ' ^ !(' + formList[formList.length - 1] + ')', formList[formList.length - 1]);
+		$('#truthOutput').append('<br>Trying to prove: ' + formListTruth[formListTruth.length - 1] + ' is consequence of ' + proof + ' by contradiction');
+		isConsequence = separateAtom(proof + ' ^ !(' + formListTruth[formListTruth.length - 1] + ')', formListTruth[formListTruth.length - 1], true);
 		if (isConsequence) {
 			$('#truthOutput').append('Consequence confirmed');
 		} else {
@@ -371,9 +440,30 @@
 		
 		};
 		
-		function separateAtom(formula, argument) {	
-			var split = formula, table = {}, keyList = [], aux = -1, k =0, j = 0, numOfAtom = 0, numOfRows, tableAux = [], tableAuxN = [], formulaMatch = [], isTrue = false, isConsequence = true;
-			console.log(formula);
+		function solveTruthTable (formula, valueTable, k) {
+		var split = formula, re, testExceptV = /\![a-ux-z]/, aux = split.match(testExceptV), val ='';
+			while(aux !== null) {
+				val = valueTable[aux[0]][k]? 'T': 'F';				
+				split = split.replace(aux[0], val);
+				aux = split.match(testExceptV);
+			}
+			testExceptV = /[a-ux-z]/;
+			aux = split.match(testExceptV);
+			while(aux !== null) {
+				val = valueTable[aux[0]][k]? 'T': 'F';
+				split = split.replace(aux[0], val);
+				aux = split.match(testExceptV);
+			}
+			if(normalize({f: split}).f === 'T') {
+				return true;
+			} else {
+				return false;
+			}
+		
+		}
+		
+		function separateAtom(formula, argument, contradiction) {	
+			var split = formula, table = {}, keyList = [], aux = -1, k =0, j = 0, numOfAtom = 0, numOfRows, tableAux = [], tableAuxN = [], formulaMatch = [], matchArray = [], allTrue = [], isTrue = false, hasTrue = false, isConsequence = true;
 			for (i = 0; i < split.length; i++) {
 				if (/[a-z]/.test(split[i]) && split[i] !== 'v') {	
 					if (table[split[i]] === undefined) {
@@ -387,7 +477,6 @@
 			numOfRows = Math.pow(2, numOfAtom);
 			for (i = 0; i < split.length; i++) {
 				if (/[a-z]/.test(split[i]) && split[i] !== 'v') {
-				console.log(split[i]);
 					if (table[split[i]] === undefined) {
 					tableAux = [];
 					for (j = 0; j < numOfRows; j++) {
@@ -427,7 +516,6 @@
 						table[split[i]] = tableAux;
 						table['!' + split[i]] = tableAuxN;
 						keyList.push(split[i]);	
-						console.log(table);
 					}
 				}
 			}
@@ -436,20 +524,24 @@
 				for (i = 2; i < split.length; i++) {
 					if (split[i] !== undefined) {
 						if (table[split[i]] === undefined) {
+							if (split[i].indexOf('!(') === -1) {
+								split[i] = split[i].replace('(', '').replace(')', '');
+							}
 							keyList.push(split[i]);
 							table[split[i]] = [];
 							aux = returnAtomPair(split[i]);
+							formulaMatch = [];
 							for (k = 0; k < numOfRows; k++) {
-								if (aux[1] !== undefined) {
-									table[split[i]].push(testAtom(split[i], table[aux[0]][k], table[aux[1]][k] ));
-								} else {
-									table[split[i]].push(testAtom(split[i], table[aux[0]][k]));
+								isTrue = solveTruthTable(split[i], table, k);
+								table[split[i]].push(isTrue);
+								if (isTrue) {
+									formulaMatch.push(k);
 								}
 								
-							}						
-							
-						}
-					}				
+							}
+						matchArray.push(formulaMatch);
+						}	
+					}					
 
 				}
 			}
@@ -458,53 +550,86 @@
 				for (i = 2; i < split.length; i++)
 				if (split[i] !== undefined) {
 						if (table[split[i]] === undefined) {
+							if (split[i].indexOf('!(') === -1) {
+								split[i] = split[i].replace('(', '').replace(')', '');
+							}
 							keyList.push(split[i]);
 							table[split[i]] = [];							
 							aux = returnAtomPair(split[i]);
-							for (k = 0; k < numOfRows; k++) {
-								if (aux[1] !== undefined) {
-									table[split[i]].push(testAtom(split[i], table[aux[0]][k], table[aux[1]][k] ));
-								} else {
-									table[split[i]].push(testAtom(split[i], table[aux[0]][k]));
+							formulaMatch = [];
+							for (k = 0; k < numOfRows; k++) {							
+								isTrue = solveTruthTable(split[i], table, k);
+								table[split[i]].push(isTrue);
+								if (isTrue) {
+									formulaMatch.push(k);
 								}
 								
-							}						
-							
-						}
-					}				
+							}
+							matchArray.push(formulaMatch);
+						}	
+					}
 			}
 			keyList.push(formula);
 			table[formula] = [];
 			aux = returnAtomPair(formula);
-			
+			formulaMatch = [];
 			for (k = 0; k < numOfRows; k++) {
-				if (aux[1] !== undefined) {
-					isTrue = testAtom(formula, table[aux[0].replace('(','').replace(')','')][k], table[aux[1].replace('(','').replace(')','')][k] );					
-				} else {
-					isTrue = testAtom(formula, table[aux[0].replace('(','').replace(')','')][k]);
-				}
+				isTrue = solveTruthTable(formula, table, k);
 				table[formula].push(isTrue);
 				if (isTrue) {
+				if(contradiction)
+				console.log('aqui');
+					hasTrue = true;
 					formulaMatch.push(k);
 				}
 				
 			}
+			matchArray.push(formulaMatch);
 			keyList.push('G: ' + argument);
 			table['G: ' + argument] = [];
-			console.log(aux);
 			aux = returnAtomPair(argument);
-			console.log(aux);
+			formulaMatch = [];
 			for (k = 0; k < numOfRows; k++) {			
-				if (aux[1] !== undefined) {
-					isTrue = testAtom(argument, table[aux[0].replace('(','').replace(')','')][k], table[aux[1].replace('(','').replace(')','')][k]);					
-				} else {
-					isTrue = testAtom(argument, table[aux[0].replace('(','').replace(')','')][k]);
-				}
+				isTrue = solveTruthTable(argument, table, k);
 				table['G: ' + argument].push(isTrue);
-				if (formulaMatch.indexOf(k) !== -1 && !isTrue) {
-					isConsequence = false;
+				if (isTrue) {					
+					formulaMatch.push(k);
 				}
 				
+			}
+			matchArray.push(formulaMatch);
+			if(contradiction)
+			console.log(hasTrue);
+			if (contradiction && hasTrue) {
+				isConsequence = false;
+			} else if (contradiction && !hasTrue) {
+				isConsequence = true;
+			}
+			console.log(isConsequence);
+			if (!contradiction) {
+			var l = 0, m = 0, compare = matchArray[0];
+			
+				for(l = 0; l < compare.length; l++) {
+					isConsequence = true;
+					for (m = 1; m < matchArray.length - 1; m++) {					
+						if (matchArray[m].indexOf(compare[l]) === -1) {							
+							isConsequence = false;
+							break;
+						} 
+						
+					}
+					if (isConsequence) {
+						allTrue.push(compare[l]);
+					}
+				}
+				isConsequence = true;
+			}
+			
+			for(l = 0; l < allTrue.length; l++) {			
+				if(matchArray[matchArray.length - 1].indexOf(allTrue[l]) === -1 ){
+					isConsequence = false;
+					break;
+				}
 			}
 			
 			var proof = '<table class="table"><thead>';
@@ -610,7 +735,7 @@
 		<div class="result-container">
 			<div>
 				<h2>Logical Consequence</h2>
-				<button onclick="logicalConsequence()">Start</button>
+				<button onclick="testByConsequence()">Start</button>
 			</div>
 			
 			<div id="consequenceOutput" class="result"></div>
