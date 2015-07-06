@@ -12,7 +12,7 @@
 		var negation = new RegExp('\\!' + literal.source);
 		var atom = new RegExp('\\!?\\((' + negation.source + /|/.source + and.source + /|/.source + or.source + /|/.source + implies.source + /|/.source + biImplies.source + /|/.source + negation.source + /|/.source + literal.source + ')\\)' +
 		'|' + and.source + /|/.source + or.source + /|/.source + implies.source + /|/.source + biImplies.source + /|/.source + literal.source);	
-		var formList = [], formListTruth = [];
+		var formList = [], formListTruth = [], formListInference = [];
 		var impliesN = new RegExp('(' + atom.source + ')+\ \-\>\ +(' + atom.source + ')'),
 		andN = new RegExp('(' + atom.source + ')+\ \\^\ +(' + atom.source + ')'),
 		orN = new RegExp('(' + atom.source + ')+\ v\ +(' + atom.source + ')'),
@@ -353,6 +353,7 @@
 		function addFormula() {
 			formList.push( $('#sentenceInput').val());
 			formListTruth.push( $('#sentenceInput').val());
+			formListInference.push( $('#sentenceInput').val());
 			var proof = 'Sentences: <br>';
 			for (i = 0; i < formList.length - 1; i++) {
 				proof += 'f' + i + ':' + formList[i] + '<br>';				
@@ -373,9 +374,11 @@
 		function resetFormula() {
 			formList = [];
 			formListTruth = [];
+			formListInference = [];
 			$('#formulaOutput').html('');
 			$('#consequenceOutput').html('');
 			$('#truthOutput').html('');
+			$('#inferenceOutput').html('');
 		}
 		function testAtom(atom, ent, ent2) {
 			if (andN.test(atom)) {
@@ -577,8 +580,6 @@
 				isTrue = solveTruthTable(formula, table, k);
 				table[formula].push(isTrue);
 				if (isTrue) {
-				if(contradiction)
-				console.log('aqui');
 					hasTrue = true;
 					formulaMatch.push(k);
 				}
@@ -598,14 +599,11 @@
 				
 			}
 			matchArray.push(formulaMatch);
-			if(contradiction)
-			console.log(hasTrue);
 			if (contradiction && hasTrue) {
 				isConsequence = false;
 			} else if (contradiction && !hasTrue) {
 				isConsequence = true;
 			}
-			console.log(isConsequence);
 			if (!contradiction) {
 			var l = 0, m = 0, compare = matchArray[0];
 			
@@ -651,6 +649,50 @@
 			
 		}
 		
+		function inference () {
+		var proof = 'Trying to proof by direct form:<br>Sentences: <br>', repeat = true, n = 0, q = 0, auxTest, isConsequence = false;
+			for (i = 0; i < formListInference.length - 1; i++) {
+				proof += 'f' + i + ':' + formListInference[i] + '<br>';				
+			}
+			proof += 'G: ' + formListInference[formListInference.length - 1] + '<br>';	
+			while(repeat) {
+				repeat = false;
+				for (n = 0; n < formListInference.length - 1; n ++) {
+				
+					for(q = 0; q < formListInference.length - 1; q ++) {
+						if (q !== n) {
+							auxTest = inferenceRules(formListInference[n], formListInference[q]);
+							if (auxTest === formListInference[formListInference.length - 1]) {
+								i++;
+								proof += 'f' + i + ':' + auxTest + '<br>';	
+								repeat = false;
+								isConsequence = true;
+								break;
+							}
+							if (auxTest && formListInference[n] !== auxTest && formListInference.indexOf(auxTest) === -1) {
+								i++;
+								proof += 'f' + i + ':' + auxTest + '<br>';	
+								formListInference.push(formListInference[formListInference.length - 1]);
+								formListInference[formListInference.length - 2] = auxTest;
+								repeat = true;
+								break;
+							}							
+						}
+					}
+					if(repeat || isConsequence) {
+						break;
+					}
+								
+				}
+			}
+			if (isConsequence) {
+				proof += 'Consequence confirmed';
+			} else {
+				proof += 'Consequence denied';
+			}
+			$('#inferenceOutput').html(proof);
+		
+		}
 		function inferenceRules(formula, entry) {
 		var rule = '', aux = '', splitAux, compareVar, compareVarAux, returnString;
 			if (impliesN.test(formula)) {
@@ -670,7 +712,6 @@
 					splitAux = entry.match(impliesN);
 					compareVarAux = splitAux[1] !== undefined? splitAux[1]:splitAux[2];
 					if (compareVarAux === compareVar) { //Silogismo Hipotetico
-						rule = 'SH';		
 						returnString = split[1] !== undefined? split[1]:split[2];
 						returnString += ' -> ';
 						aux = splitAux[3] !== undefined? splitAux[3] : splitAux[4];
@@ -680,8 +721,18 @@
 				}		
 				
 				
+			} 
+			if (orN.test(formula)) {
+				split = formula.match(orN);
+				if (entry.indexOf('!' + split[1]) !== -1) {
+					returnString = formula.replace(split[0], split[3]);
+				} else if (entry.indexOf('!' + split[3]) !== -1) {
+				formula.replace(split[0], split[1]);
+					returnString = formula.replace(split[0], split[1]);
+				}
+				return returnString;	
 			}
-		
+			return formula;
 		}
 		
 		</script>
@@ -749,6 +800,15 @@
 			</div>
 			
 			<div id="truthOutput" class="result"></div>
+		</div>
+		
+		<div class="result-container">
+			<div>
+				<h2>Inference Rules</h2>
+				<button onclick="inference()">Start</button>
+			</div>
+			
+			<div id="inferenceOutput" class="result"></div>
 		</div>
 		
 	</body>
