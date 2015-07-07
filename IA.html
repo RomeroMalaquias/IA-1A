@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
+		<meta charset="UTF-8">
 		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
 
 		<script>
@@ -12,7 +13,7 @@
 		var negation = new RegExp('\\!' + literal.source);
 		var atom = new RegExp('\\!?\\((' + negation.source + /|/.source + and.source + /|/.source + or.source + /|/.source + implies.source + /|/.source + biImplies.source + /|/.source + negation.source + /|/.source + literal.source + ')\\)' +
 		'|' + and.source + /|/.source + or.source + /|/.source + implies.source + /|/.source + biImplies.source + /|/.source + literal.source);	
-		var formList = [], formListTruth = [], formListInference = [];
+		var formList = [], formListTruth = [], formListInference = [], contradictionList = [];
 		var impliesN = new RegExp('(' + atom.source + ')+\ \-\>\ +(' + atom.source + ')'),
 		andN = new RegExp('(' + atom.source + ')+\ \\^\ +(' + atom.source + ')'),
 		orN = new RegExp('(' + atom.source + ')+\ v\ +(' + atom.source + ')'),
@@ -39,14 +40,14 @@
 		par = new RegExp('\\(\\!?[a-zA-Z]\\)'),
 		parP = new RegExp('\\(\\((' + andN.source + ')*(' + orN.source + ')*\\)\\)');
 		var count = 0;
-		var verbTerm = ['o', 'as', 'es', 'amos', 'emos', 'imos', 'ais', 'eis', 'is', 'am', 'em', 'ava', 'ia', 'avas', 'ia', 'ias', 'ava', 'ávamos', 'íamos', 'áveis', 'íeis', 'íamos', 'áveos', 'íeis', 'avam', 'iam', 'ei', 'i', 'aste', 'este', 'iste', 'ou', 'eu', 'iu', 'ámos', 'emos', 'imos', 'astes', 'estes', 'istes', 'aram', 'eram', 'iram', 'ara', 'era', 'ira', 'aras', 'eras', 'iras', 'ara', 'era', 'ira', 'áramos', 'êramos', 'íramos', 'áreis', 'êreis', 'íreis', 'aram', 'eram', 'iram', 'arei', 'erei', 'irei', 'arás', 'erás', 'irás', 'ará', 'erás', 'irás', 'ará', 'erá', 'irá', 'aremos', 'eremos', 'iremos', 'areis', 'ereis', 'ireis', 'arão', 'erão', 'irão'];
+		
 		
 		function normalize (params) {
 		var formCache = params.c !== undefined? params.c : [];		
 		if (count < 2000) {
 			count++;
-		} else {
-			return;
+		} else {			
+			return params;
 		}
 		
 		var split, formula = params.f, t = params.t;
@@ -156,38 +157,39 @@
 				formula = formula.replace(beOrNotToBe2, 'F');
 				t = 'be';	
 			} else if (orNP.test(formula) && t !== 'orNP') {
-				split = formula.match(orNP);
-				var auxF, auxF2;					
-				auxF = normalize({f: split[1]});
-				auxF2 = normalize({f: split[11]});
-				if (auxF !== false) {
+				split = formula.match(orNP);				
+				var auxF, auxF2, auxFT = split[1]?split[1]:split[6], auxFT2 = split[11]?split[11]:split[16];
+				auxF = normalize({f: auxFT});
+				auxF2 = normalize({f: auxFT2});				
+				if (auxF !== false && auxF !== undefined) {
 					formula = '(' +auxF.f+')';
 				} else {
-					formula = '('+ split[1] + ')';
+					formula = '('+ auxFT + ')';
 				}
 				formula += ' v ';
-				if (auxF2 !== false) {
+				if (auxF2 !== false && auxF2 !== undefined) {
 					formula += '(' +auxF2.f+')';
 				} else {
-					formula += '('+ split[11] + ')';
-				}				
+					formula += '('+ auxFT2 + ')';
+				}
 				t = 'orNP';			
 			} else if (andNP.test(formula) && t !== 'andNP') {
 				split = formula.match(andNP);
-				var auxF, auxF2;
-				auxF = normalize({f: split[1]});
-				auxF2 = normalize({f: split[11]});
-				if (auxF !== false) {
+				var auxF, auxF2, auxFT = split[1]?split[1]:split[6], auxFT2 = split[11]?split[11]:split[16];
+
+				auxF = normalize({f: auxFT});
+				auxF2 = normalize({f: auxFT2});
+				if (auxF !== false && auxF !== undefined) {
 					formula = '(' +auxF.f+')';
 				} else {
-					formula = '('+ split[1] + ')';
+					formula = '('+ auxFT + ')';
 				}
 				formula += ' v ';
-				if (auxF2 !== false) {
+				if (auxF2 !== false && auxF2 !== undefined) {
 					formula += '(' +auxF2.f+')';
 				} else {
-					formula += '('+ split[11] + ')';
-				}				
+					formula += '('+ auxFT2 + ')';
+				}		
 				t = 'andNP';			
 			} else if (orAnd.test(formula) && t !== 'oA') {
 				split = formula.match(orAnd);
@@ -214,7 +216,7 @@
 			} else if (t !== 'par'){		
 				formCache = [];			
 				return {f: params.f, t: params.t};
-			} else {			
+			} else {		
 				if (formula === params.f) {
 					return {f: params.f, t: params.t};
 				}
@@ -304,7 +306,7 @@
 			j = 1;
 			normalizedParams = formListAux[0];
 			while (repeat) {
-				while (repeat) {	
+				while (repeat) {
 					if (indexUsed.indexOf(j) === -1) {
 						normaLizeParams = normalizePair(normalizedParams, formListAux[j]);
 						if (normaLizeParams !== false) {							
@@ -321,9 +323,10 @@
 						repeat = false;
 					}
 				}
-				if (indexUsed.length >= formListAux.length -1) {				
+				if (indexUsed.length >= formListAux.length -1 || count === 2000) {				
 					repeat = false;	
-					proof += normalizedParams + '<br>';				
+					proof += normalizedParams + '<br>';		
+					count =0;					
 				} else {
 					j = 1;
 					repeat = true;
@@ -350,10 +353,14 @@
 			$('#consequenceOutput').html($('#consequenceOutput').html() + proof);
 			
 		}
-		function addFormula() {
-			formList.push( $('#sentenceInput').val());
-			formListTruth.push( $('#sentenceInput').val());
-			formListInference.push( $('#sentenceInput').val());
+		function addFormula(form) {
+			if (!form) {
+				form = $('#sentenceInput').val();
+			}
+			formList.push(form);
+			formListTruth.push(form);
+			formListInference.push(form);
+			contradictionList.push(form);
 			var proof = 'Sentences: <br>';
 			for (i = 0; i < formList.length - 1; i++) {
 				proof += 'f' + i + ':' + formList[i] + '<br>';				
@@ -363,9 +370,10 @@
 		
 		}	
 		function testByConsequence () {
+			var contradiction = formList;			
 			logicalConsequence(formList);
-			$('#consequenceOutput').append('<BR>');
-			logicalConsequence(formList, true);
+			$('#consequenceOutput').append('<BR>');			
+			logicalConsequence(contradictionList, true);
 		}
 		function normalizeInput() {
 			var result = normalize( {f: $('#sentence2Input').val(), t: ''});
@@ -375,6 +383,7 @@
 			formList = [];
 			formListTruth = [];
 			formListInference = [];
+			contradictionList = [];
 			$('#formulaOutput').html('');
 			$('#consequenceOutput').html('');
 			$('#truthOutput').html('');
@@ -420,7 +429,8 @@
 
 		var atomList = [];
 		function truthTable () {
-		var proof = '', i = 0, isConsequence;		
+		var proof = '', i = 0, isConsequence;	
+		count = 0;		
 		for (i = 0; i < formListTruth.length - 1; i++) {
 			proof += '(' +formListTruth[i] + ') ^ ';
 		}
@@ -476,49 +486,64 @@
 					
 				}
 			}
+			console.log(table);
 			table = [];
 			numOfRows = Math.pow(2, numOfAtom);
 			for (i = 0; i < split.length; i++) {
 				if (/[a-z]/.test(split[i]) && split[i] !== 'v') {
-					if (table[split[i]] === undefined) {
-					tableAux = [];
-					for (j = 0; j < numOfRows; j++) {
-						if (k === 0) {
-							if (j < (numOfRows / 2)) {
-								tableAux.push(true);
-								tableAuxN.push(false);
+					if (table[split[i]] === undefined) {						
+						tableAux = [];				
+						for (j = 0; j < numOfRows; j++) {
+							if (k === 0) {
+								if (j < (numOfRows / 2)) {
+									tableAux.push(true);
+									tableAuxN.push(false);
+								} else {
+									tableAux.push(false);
+									tableAuxN.push(true);
+								}
+							} else if (k > 0 && k < numOfAtom - 1) {
+								console.log('i > 0');
+								aux = parseInt(numOfRows / (numOfAtom * k));
+								console.log(aux + ' = ' + numOfAtom + ' * ' + k);
+								console.log(j % aux);
+								if (j % aux !== 0) {
+									console.log('!=0');									
+									tableAux.push(tableAux[tableAux.length-1]);
+									tableAuxN.push(!tableAux[tableAux.length-1]);
+									console.log(tableAux);
+								} else {
+									console.log('==0');		
+									console.log(tableAux.length);
+									if (tableAux.length === 0) {
+										console.log('aqui');
+										tableAux.push(true);
+										tableAuxN.push(false);
+									} else {
+										tableAux.push(!tableAux[tableAux.length-1]);
+										tableAuxN.push(tableAux[tableAux.length-1]);
+									}
+									console.log(tableAux);
+									
+								}
+							
 							} else {
-								tableAux.push(false);
-								tableAuxN.push(true);
-							}
-						} else if (k === 1) {
-							if ((j +1) % 3 === 0 || (j + 1) % 4 === 0 || (j + 1) % 7 === 0) {
-								tableAux.push(false);
-								tableAuxN.push(true);
-							} else {
-								tableAux.push(true);
-								tableAuxN.push(false);
-							}
-						
-						} else if (k === 2) {
-							if (j % 2 === 0) {
-								tableAux.push(true);
-								tableAuxN.push(false);
-							} else {
-								tableAux.push(false);
-								tableAuxN.push(true);
-							}
-						}						
-					}
-						if (numOfRows === 8) {
-							k ++;
-						} else {
-							k = k + 2;
+								if (j % 2 === 0) {
+									tableAux.push(true);
+									tableAuxN.push(false);
+								} else {
+									tableAux.push(false);
+									tableAuxN.push(true);
+								}
+							}						
 						}
-						
-						table[split[i]] = tableAux;
-						table['!' + split[i]] = tableAuxN;
-						keyList.push(split[i]);	
+							
+							k++;							
+							aux = -1;
+							
+							table[split[i]] = tableAux;
+							table['!' + split[i]] = tableAuxN;
+							keyList.push(split[i]);	
 					}
 				}
 			}
@@ -662,6 +687,7 @@
 					for(q = 0; q < formListInference.length - 1; q ++) {
 						if (q !== n) {
 							auxTest = inferenceRules(formListInference[n], formListInference[q]);
+							auxTest = auxTest.replace('!!', '');
 							if (auxTest === formListInference[formListInference.length - 1]) {
 								i++;
 								proof += 'f' + i + ':' + auxTest + '<br>';	
@@ -734,7 +760,83 @@
 			}
 			return formula;
 		}
+		var verbKeys = [], verbMap = {};		
+		var ignore = ['se', 'então'];
+		var clause = ['o', 'os', 'a', 'as', 'um', 'uns'];
+		var verbTerm = ['a', 'e', 'o', 'as', 'es', 'amos', 'emos', 'imos', 'ais', 'eis', 'is', 'am', 'em', 'ava', 'ia', 'avas', 'ia', 'ias', 'ava', 'ávamos', 'íamos', 'áveis', 'íeis', 'íamos', 'áveos', 'íeis', 'avam', 'iam', 'ei', 'i', 'aste', 'este', 'iste', 'ou', 'eu', 'iu', 'ámos', 'emos', 'imos', 'astes', 'estes', 'istes', 'aram', 'eram', 'iram', 'ara', 'era', 'ira', 'aras', 'eras', 'iras', 'ara', 'era', 'ira', 'áramos', 'êramos', 'íramos', 'áreis', 'êreis', 'íreis', 'aram', 'eram', 'iram', 'arei', 'erei', 'irei', 'arás', 'erás', 'irás', 'ará', 'erás', 'irás', 'ará', 'erá', 'irá', 'aremos', 'eremos', 'iremos', 'areis', 'ereis', 'ireis', 'arão', 'erão', 'irão'];
+		var lastId = -1;
+		function NPL (text) {
+			var sentence = text.split('.'), temp, cond = [], con = [], i = 0, tempAux;
+			for (i = 0; i < sentence.length; i++) {
+				temp = sentence[i].split(',');	
+				console.log(temp);
+				if (temp[0]) {
+					tempAux = findVerb(temp[0]);
+					console.log(tempAux);
+					if(tempAux) {
+						cond.push(tempAux);		
+					}
+					
+				}
+				if (temp[1]) {					
+					tempAux = findVerb(temp[1]);
+					console.log(tempAux);
+					if(tempAux) {
+						con.push(tempAux);
+					}
+				}		
+			}
+			for (i = 0; i < cond.length ; i++) {
+				var input = cond[i];
+				if(con[i]) {
+					input += ' -> ' + con[i];					
+				}
+				addFormula(input);
+			}
 		
+		}
+		function findVerb(phrase) {		
+			var term = phrase.split(' '), i = 0;
+			for (i = 0; i < term.length; i++) {
+				if (ignore.indexOf(term[i].toLowerCase()) !== -1) {				
+				} else if (term[i].toLowerCase() === 'não') {
+					return '!' + getByMap(term[i + 1]);
+				} else if (verbTerm.indexOf(term[i].toLowerCase()) !== -1) {
+					i++;
+				} else if (testVerb(term[i].toLowerCase())) {
+					return getByMap(term[i]);
+				}
+			}
+		}
+		
+		function testVerb (term) {
+			return getRadical(term)? true : false;			
+			return false;
+		}
+		function getRadical (verb) {
+			for(var i = 0; i < verbTerm.length; i++) {
+			var aux = verb.lastIndexOf(verbTerm[i].toLowerCase());
+				if(aux !== -1) {	
+					return verb.substring(0, aux);
+				}
+			}
+			return undefined;
+		
+		}
+		function makeId()
+		{    
+			var possible = 'abcdefghijklmnopqrstwxyz';
+			lastId ++;
+			return possible.charAt(lastId);
+		}
+		function getByMap (key) {
+			var auxKey = getRadical(key);
+			if (verbKeys.indexOf(auxKey) === -1) {
+				verbKeys.push(auxKey);
+				verbMap[auxKey] = makeId();
+			}
+			return verbMap[auxKey];
+		}
 		</script>
 	<style>
 	.result {
