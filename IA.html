@@ -486,7 +486,7 @@
 					
 				}
 			}
-			console.log(table);
+
 			table = [];
 			numOfRows = Math.pow(2, numOfAtom);
 			for (i = 0; i < split.length; i++) {
@@ -687,7 +687,10 @@
 					for(q = 0; q < formListInference.length - 1; q ++) {
 						if (q !== n) {
 							auxTest = inferenceRules(formListInference[n], formListInference[q]);
-							auxTest = auxTest.replace('!!', '');
+							if (auxTest) {
+								auxTest = auxTest.replace('!!', '');
+							}
+							
 							if (auxTest === formListInference[formListInference.length - 1]) {
 								i++;
 								proof += 'f' + i + ':' + auxTest + '<br>';	
@@ -766,6 +769,10 @@
 		var verbTerm = ['a', 'e', 'o', 'as', 'es', 'amos', 'emos', 'imos', 'ais', 'eis', 'is', 'am', 'em', 'ava', 'ia', 'avas', 'ia', 'ias', 'ava', 'ávamos', 'íamos', 'áveis', 'íeis', 'íamos', 'áveos', 'íeis', 'avam', 'iam', 'ei', 'i', 'aste', 'este', 'iste', 'ou', 'eu', 'iu', 'ámos', 'emos', 'imos', 'astes', 'estes', 'istes', 'aram', 'eram', 'iram', 'ara', 'era', 'ira', 'aras', 'eras', 'iras', 'ara', 'era', 'ira', 'áramos', 'êramos', 'íramos', 'áreis', 'êreis', 'íreis', 'aram', 'eram', 'iram', 'arei', 'erei', 'irei', 'arás', 'erás', 'irás', 'ará', 'erás', 'irás', 'ará', 'erá', 'irá', 'aremos', 'eremos', 'iremos', 'areis', 'ereis', 'ireis', 'arão', 'erão', 'irão'];
 		var lastId = -1;
 		function NPL (text) {
+			console.log(text);
+			if (!text) {			
+				text = $('#textInput').val();
+			}
 			var sentence = text.split('.'), temp, cond = [], con = [], i = 0, tempAux;
 			for (i = 0; i < sentence.length; i++) {
 				temp = sentence[i].split(',');	
@@ -871,6 +878,10 @@
 	th:nth-child(1), td:nth-child(1){
 		border-left: 1px solid white;
 	}
+	textarea {
+		width: 100%;
+		height: 90px;
+	}
 	</style>
 	</head>
 	<body>
@@ -884,6 +895,10 @@
 			
 			<div id="formulaOutput" class="result"></div>
 
+		</div>
+		<div class="result-container">
+			<textarea id="textInput"></textarea>
+			<button onclick="NPL()">Add Sentence</button>				
 		</div>
 		<div class="result-container">
 			<div>
